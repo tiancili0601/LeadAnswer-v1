@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LeadAnswer — 苏格拉底式 AI 助教</title>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<style>
+:root {
+    --bg: #fcfcfc;
+    --surface: #ffffff;
+    --text: #1f1f23;
+    --muted: #8b8b94;
+    --line: #e9e7ee;
+    --accent: #7c5cff;
+    --accent-strong: #6a48f5;
+    --accent-soft: #f2eeff;
+    --danger: #d9534f;
+    --shadow: 0 12px 40px rgba(26, 22, 40, 0.08), 0 2px 8px rgba(26, 22, 40, 0.04);
+    --font: "Inter", "SF Pro Display", system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; margin: 0; }
+body {
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+button, textarea, input { font: inherit; }
+button { cursor: pointer; }
+.view { min-height: 100dvh; }
+
+/* ==========================================
+   对话页
+   ========================================== */
+.chat-view {
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+}
+.topbar {
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 18px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    background: linear-gradient(180deg, rgba(252,252,252,.98), rgba(252,252,252,.86));
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    z-index: 15;
+}
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+}
+.brand-star { width: 24px; height: 24px; flex: 0 0 auto; color: var(--accent); }
+.brand-sub {
+    margin-left: 2px;
+    color: var(--muted);
+    font-size: 0.76rem;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+}
+.end-btn {
+    flex: 0 0 auto;
+    padding: 0.66rem 1.1rem;
+    border: 0;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 500;
+    white-space: nowrap;
+    box-shadow: 0 6px 18px rgba(124,92,255,.22);
+    transition: background .2s, box-shadow .2s, opacity .2s;
+}
+.end-btn:hover:not(:disabled) {
+    background: var(--accent-strong);
+    box-shadow: 0 8px 24px rgba(124,92,255,.3);
+}
+.end-btn:disabled { opacity: .42; cursor: not-allowed; box-shadow: none; }
+
+.chat-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #ddd9e8 transparent;
+}
+.chat-inner {
+    width: 100%;
+    max-width: 800px;
+    min-height: 100%;
+    margin: 0 auto;
+    padding: 16px 28px 200px;
+    display: flex;
+    flex-direction: column;
+}
+.empty-state {
+    max-width: 520px;
+    margin: auto;
+    padding: 32px 0;
+    text-align: center;
+}
+.empty-icon {
+    width: 88px;
+    height: 88px;
+    margin: 0 auto 24px;
+    display: grid;
+    place-items: center;
+    border-radius: 24px;
+    background: linear-gradient(180deg, #faf8ff, #f0ebff);
+    color: #c2b2ff;
+    box-shadow: inset 0 0 0 1px rgba(124,92,255,.08);
+}
+.empty-icon svg { width: 46px; height: 46px; }
+.empty-state h1 {
+    margin: 0 0 10px;
+    font-size: clamp(1.4rem, 3vw, 1.7rem);
+    font-weight: 600;
+    letter-spacing: -0.035em;
+}
+.empty-state p {
+    margin: 0;
+    color: var(--muted);
+    font-size: .95rem;
+    line-height: 1.7;
+}
+
+/* ==========================================
+   消息（无左右气泡）
+   ========================================== */
+.messages {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+.message {
+    width: 100%;
+    animation: message-in .25s ease both;
+}
+@keyframes message-in {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.message.user .message-text {
+    width: fit-content;
+    max-width: 100%;
+    padding: 12px 16px;
+    border-radius: 14px;
+    background: #f4f2f8;
+    color: #303038;
+    font-weight: 600;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+}
+.message.assistant .message-text {
+    padding: 0 2px;
+    font-size: .97rem;
+    line-height: 1.85;
+    overflow-wrap: break-word;
+}
+.message.assistant .message-text > :first-child { margin-top: 0; }
+.message.assistant .message-text > :last-child { margin-bottom: 0; }
+.message-text p { margin: 0 0 .8em; }
+.message-text ul, .message-text ol { margin: .2em 0 .9em; padding-left: 1.3em; }
+.message-text li { margin: .2em 0; }
+.message-text h1, .message-text h2, .message-text h3 {
+    margin: .8em 0 .4em;
+    font-size: 1.08em;
+    letter-spacing: -0.02em;
+}
+.message-text code {
+    padding: .12em .36em;
+    border-radius: 5px;
+    background: #f3f1f7;
+    font-size: .9em;
+}
+.message-text pre {
+    margin: .8em 0;
+    padding: 12px;
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #f8f6fb;
+}
+.message-text pre code { padding: 0; background: transparent; }
+.message-text a { color: var(--accent-strong); }
+.message-text table { width: 100%; border-collapse: collapse; margin: .8em 0; }
+.message-text th, .message-text td {
+    padding: .45em .6em;
+    border: 1px solid var(--line);
+    text-align: left;
+}
+.message-image {
+    display: block;
+    max-width: 240px;
+    max-height: 180px;
+    margin-top: 10px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    object-fit: contain;
+}
+.message.error .message-text { color: var(--danger); }
+
+/* ==========================================
+   悬浮输入框
+   ========================================== */
+.composer-wrap {
+    position: fixed;
+    left: 50%;
+    bottom: 18px;
+    transform: translateX(-50%);
+    width: min(800px, calc(100% - 32px));
+    z-index: 20;
+}
+.image-preview {
+    width: max-content;
+    max-width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 6px 18px rgba(26,22,40,.05);
+}
+.image-preview img {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    object-fit: cover;
+}
+.preview-meta { color: var(--muted); font-size: .75rem; }
+.preview-remove { margin-left: 4px; color: var(--danger); font-size: .75rem; cursor: pointer; }
+.composer {
+    padding: 12px 12px 10px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: var(--shadow);
+    transition: border-color .2s, box-shadow .2s;
+}
+.composer:focus-within {
+    border-color: #cfc4ff;
+    box-shadow: 0 0 0 3px rgba(124,92,255,.08), var(--shadow);
+}
+#chat-input {
+    display: block;
+    width: 100%;
+    min-height: 30px;
+    max-height: 160px;
+    padding: 6px 8px 4px;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--text);
+    font-size: .98rem;
+    line-height: 1.6;
+    resize: none;
+    overflow-y: auto;
+}
+#chat-input::placeholder { color: #aaa7b2; }
+.composer-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+}
+.icon-btn {
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    background: #faf9fc;
+    color: #5f5f68;
+    font-size: 1.15rem;
+    line-height: 1;
+    transition: background .2s, border-color .2s, color .2s;
+}
+.icon-btn:hover { background: var(--accent-soft); border-color: #d9d0ff; color: var(--accent-strong); }
+.model-label { margin-left: 2px; color: var(--muted); font-size: .74rem; white-space: nowrap; }
+.send-btn {
+    width: 34px;
+    height: 34px;
+    margin-left: auto;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(124,92,255,.3);
+    transition: background .2s, opacity .2s, box-shadow .2s;
+}
+.send-btn:hover:not(:disabled) { background: var(--accent-strong); }
+.send-btn:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; }
+.send-btn svg { width: 16px; height: 16px; }
+
+/* ==========================================
+   学情报告页
+   ========================================== */
+.report-view {
+    height: 100dvh;
+    overflow-y: auto;
+    background: var(--bg);
+}
+.report-topbar {
+    position: sticky;
+    top: 0;
+    background: rgba(252,252,252,.94);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+.ghost-btn {
+    padding: .55rem .9rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--text);
+    font-size: .78rem;
+    transition: border-color .2s, color .2s, background .2s;
+}
+.ghost-btn:hover { border-color: #cfc4ff; color: var(--accent-strong); background: var(--accent-soft); }
+.report-shell {
+    width: 100%;
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 24px 28px 64px;
+}
+.report-heading { margin: 12px 0 24px; }
+.eyebrow {
+    margin: 0 0 12px;
+    color: var(--accent);
+    font-size: .7rem;
+    font-weight: 600;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+}
+.report-heading h1 {
+    margin: 0 0 8px;
+    font-size: clamp(1.6rem, 4vw, 2rem);
+    font-weight: 600;
+    letter-spacing: -.04em;
+}
+.report-sub { margin: 0; color: var(--muted); font-size: .9rem; line-height: 1.7; }
+.panel {
+    margin-top: 18px;
+    padding: 22px 24px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--surface);
+    box-shadow: 0 4px 18px rgba(26,22,40,.04);
+}
+.panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.panel-head h2 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: -.02em;
+}
+.quiz-status { color: var(--muted); font-size: .76rem; text-align: right; }
+.field {
+    display: flex;
+    gap: 16px;
+    padding: 12px 0;
+    border-top: 1px solid #f1eff5;
+}
+.field:first-of-type { padding-top: 0; border-top: 0; }
+.field-label {
+    flex: 0 0 76px;
+    padding-top: 2px;
+    color: var(--muted);
+    font-size: .78rem;
+}
+.field-content {
+    flex: 1;
+    min-width: 0;
+    font-size: .92rem;
+    line-height: 1.8;
+    overflow-wrap: break-word;
+}
+.field-weak { color: var(--danger); font-weight: 600; }
+.field-muted { color: #6f6f78; }
+.quiz-content {
+    font-size: .93rem;
+    line-height: 1.85;
+    overflow-wrap: break-word;
+}
+.quiz-content h1, .quiz-content h2, .quiz-content h3 {
+    margin: .9em 0 .45em;
+    font-size: 1.05em;
+}
+.quiz-content p { margin: 0 0 .8em; }
+.quiz-content ul, .quiz-content ol { margin: .2em 0 .9em; padding-left: 1.3em; }
+.quiz-content code {
+    padding: .12em .36em;
+    border-radius: 5px;
+    background: #f3f1f7;
+    font-size: .9em;
+}
+.quiz-content pre {
+    padding: 12px;
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #f8f6fb;
+}
+.answers {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px dashed var(--line);
+    color: #4d4d55;
+}
+.quiz-actions { display: flex; justify-content: flex-start; margin-top: 14px; }
+.report-footer { display: flex; justify-content: flex-end; margin-top: 24px; }
+.primary-btn {
+    padding: .68rem 1.15rem;
+    border: 0;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #fff;
+    font-size: .82rem;
+    font-weight: 500;
+    box-shadow: 0 6px 18px rgba(124,92,255,.22);
+    transition: background .2s, box-shadow .2s;
+}
+.primary-btn:hover { background: var(--accent-strong); box-shadow: 0 8px 24px rgba(124,92,255,.3); }
+.report-error { color: var(--danger); font-size: .9rem; line-height: 1.7; }
+
+/* ==========================================
+   移动端
+   ========================================== */
+@media (max-width: 640px) {
+    .topbar { padding: 14px 16px; gap: 10px; }
+    .brand-sub { display: none; }
+    .end-btn { padding: .55rem .8rem; font-size: .72rem; }
+    .chat-inner { padding: 8px 16px 180px; }
+    .composer-wrap { width: calc(100% - 20px); bottom: 10px; }
+    .empty-icon { width: 76px; height: 76px; border-radius: 20px; }
+    .empty-icon svg { width: 40px; height: 40px; }
+    .empty-state h1 { font-size: 1.35rem; }
+    .report-shell { padding: 16px 16px 48px; }
+    .panel { padding: 18px; border-radius: 14px; }
+    .field { flex-direction: column; gap: 4px; }
+    .field-label { flex: none; }
+    .report-heading h1 { font-size: 1.6rem; }
+    .panel-head { align-items: flex-start; }
+    .quiz-status { max-width: 48%; line-height: 1.4; }
+}
+</style>
+</head>
+<body>
+
+<!-- ==========================================
+     对话视图
+     ========================================== -->
+<main id="chat-view" class="view chat-view">
+    <header class="topbar">
+        <div class="brand">
+            <svg class="brand-star" viewBox="0 0 64 64" aria-hidden="true">
+                <path fill="currentColor" d="M62 32 L44.008 36.976 L53.213 10.787 L36.976 44.008 L32 62 L27.024 44.008 L10.787 53.213 L19.992 36.976 L2 32 L19.992 27.024 L10.787 10.787 L27.024 19.992 L32 2 L36.976 19.992 L53.213 10.787 L44.008 27.024 Z"/>
+            </svg>
+            <span>LeadAnswer</span>
+            <span class="brand-sub">苏格拉底式 AI 助教</span>
+        </div>
+        <button type="button" id="end-btn" class="end-btn" onclick="endConversation()" disabled>
+            结束对话，生成学情诊断
+        </button>
+    </header>
+
+    <section id="chat-window" class="chat-scroll" aria-live="polite">
+        <div class="chat-inner">
+            <div id="empty-state" class="empty-state">
+                <div class="empty-icon">
+                    <svg viewBox="0 0 64 64" aria-hidden="true">
+                        <path fill="currentColor" d="M62 32 L44.008 36.976 L53.213 10.787 L36.976 44.008 L32 62 L27.024 44.008 L10.787 53.213 L19.992 36.976 L2 32 L19.992 27.024 L10.787 10.787 L27.024 19.992 L32 2 L36.976 19.992 L53.213 10.787 L44.008 27.024 Z"/>
+                    </svg>
+                </div>
+                <h1>有什么我可以帮你的吗？</h1>
+                <p>上传受力图，开启苏格拉底式辅导</p>
+            </div>
+            <div id="messages" class="messages"></div>
+        </div>
+    </section>
+
+    <div class="composer-wrap">
+        <div id="image-preview" class="image-preview" hidden>
+            <img id="preview-img" alt="待发送图片">
+            <span class="preview-meta">图片已就绪</span>
+            <span class="preview-remove" onclick="clearPendingImage()">移除</span>
+        </div>
+
+        <div class="composer">
+            <textarea id="chat-input" rows="1"
+                      placeholder="输入你的问题，或上传受力图、剪力图…"
+                      aria-label="输入你的问题"></textarea>
+
+            <div class="composer-bar">
+                <button type="button" class="icon-btn" aria-label="上传图片"
+                        onclick="document.getElementById('image-input').click()">+</button>
+                <input type="file" id="image-input" accept="image/*" hidden onchange="handleImageSelect(event)">
+                <span class="model-label">DeepSeek V4.1</span>
+
+                <button type="button" id="send-btn" class="send-btn" aria-label="发送" onclick="sendChatMessage()">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M12 19V5M12 5L5.5 11.5M12 5L18.5 11.5"
+                              stroke="currentColor" stroke-width="2"
+                              stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- ==========================================
+     学情报告 / 样卷视图
+     ========================================== -->
+<main id="report-view" class="view report-view" hidden>
+    <header class="topbar report-topbar">
+        <div class="brand">
+            <svg class="brand-star" viewBox="0 0 64 64" aria-hidden="true">
+                <path fill="currentColor" d="M62 32 L44.008 36.976 L53.213 10.787 L36.976 44.008 L32 62 L27.024 44.008 L10.787 53.213 L19.992 36.976 L2 32 L19.992 27.024 L10.787 10.787 L27.024 19.992 L32 2 L36.976 19.992 L53.213 10.787 L44.008 27.024 Z"/>
+            </svg>
+            <span>LeadAnswer</span>
+            <span class="brand-sub">学情报告</span>
+        </div>
+        <button type="button" class="ghost-btn" onclick="restartConversation()">重新对话</button>
+    </header>
+
+    <div class="report-shell">
+        <div class="report-heading">
+            <p class="eyebrow">Learning Report</p>
+            <h1>学情报告与样卷练习</h1>
+            <p class="report-sub">基于本次对话生成。建议先独立完成样卷，再查看参考答案。</p>
+        </div>
+
+        <section class="panel diagnosis-panel">
+            <div class="panel-head">
+                <h2>学情诊断</h2>
+            </div>
+            <div class="field">
+                <span class="field-label">薄弱点</span>
+                <div id="report-diagnosis" class="field-content field-weak">—</div>
+            </div>
+            <div class="field">
+                <span class="field-label">证据</span>
+                <div id="report-evidence" class="field-content field-muted">—</div>
+            </div>
+            <div class="field" id="report-visual-row" hidden>
+                <span class="field-label">视觉证据</span>
+                <div id="report-visual" class="field-content field-muted">—</div>
+            </div>
+            <div class="field">
+                <span class="field-label">下一步建议</span>
+                <div id="report-suggestion" class="field-content">—</div>
+            </div>
+        </section>
+
+        <section class="panel quiz-panel">
+            <div class="panel-head">
+                <h2>针对性样卷</h2>
+                <span id="quiz-status" class="quiz-status">正在生成…</span>
+            </div>
+            <div id="quiz-content" class="quiz-content"></div>
+            <div class="quiz-actions">
+                <button type="button" id="toggle-answers-btn" class="ghost-btn"
+                        onclick="toggleAnswers()" hidden>查看参考答案</button>
+            </div>
+            <div id="quiz-answers" class="quiz-content answers" hidden></div>
+        </section>
+
+        <div class="report-footer">
+            <button type="button" class="primary-btn" onclick="restartConversation()">重新对话</button>
+        </div>
+    </div>
+</main>
+
+<script>
+    const API_BASE = "http://127.0.0.1:8000";
+    const DEMO_STUDENT_ID = "demo_student";
+
+    const chatView = document.getElementById("chat-view");
+    const reportView = document.getElementById("report-view");
+    const chatWindow = document.getElementById("chat-window");
+    const messagesEl = document.getElementById("messages");
+    const emptyState = document.getElementById("empty-state");
+    const inputEl = document.getElementById("chat-input");
+    const sendBtn = document.getElementById("send-btn");
+    const endBtn = document.getElementById("end-btn");
+    const previewEl = document.getElementById("image-preview");
+    const previewImg = document.getElementById("preview-img");
+
+    let chatHistory = [];
+    let pendingImage = null;
+    let isSending = false;
+    let isEnding = false;
+    let currentDiagnosis = null;
+    let reportToken = 0;
+
+    function updateSendState() {
+        sendBtn.disabled = isSending || isEnding || (!inputEl.value.trim() && !pendingImage);
+    }
+
+    function updateEndButton() {
+        endBtn.disabled = isSending || isEnding || !chatHistory.some(item => item.role === "user");
+    }
+
+    function autoResize() {
+        inputEl.style.height = "auto";
+        inputEl.style.height = `${Math.min(inputEl.scrollHeight, 160)}px`;
+    }
+
+    function scrollChat() {
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+        return String(text).replace(/[&<>"']/g, ch => ({
+            "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+        }[ch]));
+    }
+
+    function renderMarkdown(text) {
+        try {
+            if (window.marked && typeof marked.parse === "function") {
+                return marked.parse(text || "");
+            }
+        } catch (e) {
+            console.warn("Markdown 渲染失败，降级为纯文本:", e);
+        }
+        return escapeHtml(text || "").replace(/\n/g, "<br>");
+    }
+
+    function renderMath(element) {
+        if (!element || typeof renderMathInElement !== "function") return;
+        try {
+            renderMathInElement(element, {
+                delimiters: [
+                    { left: "$$", right: "$$", display: true },
+                    { left: "\\[", right: "\\]", display: true },
+                    { left: "$", right: "$", display: false },
+                    { left: "\\(", right: "\\)", display: false }
+                ],
+                throwOnError: false
+            });
+        } catch (e) {
+            console.warn("公式渲染失败（流式输出可能尚未闭合）:", e);
+        }
+    }
+
+    function handleImageSelect(event) {
+        const file = event.target.files && event.target.files[0];
+        event.target.value = "";
+        if (!file) return;
+
+        if (!file.type.startsWith("image/")) {
+            alert("请选择图片文件");
+            return;
+        }
+        if (file.size > 6 * 1024 * 1024) {
+            alert("图片过大，请压缩到 6MB 以内");
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            const dataUrl = reader.result;
+            const match = /^data:([^;]+);base64,(.*)$/.exec(dataUrl);
+            if (!match) {
+                alert("图片读取失败");
+                return;
+            }
+            pendingImage = { dataUrl, mime: match[1], base64: match[2] };
+            previewImg.src = dataUrl;
+            previewEl.hidden = false;
+            updateSendState();
+        };
+        reader.onerror = () => alert("图片读取失败");
+        reader.readAsDataURL(file);
+    }
+
+    function clearPendingImage() {
+        pendingImage = null;
+        previewImg.src = "";
+        previewEl.hidden = true;
+        updateSendState();
+    }
+
+    function addMsg(text, role, imageDataUrl = null) {
+        const wrap = document.createElement("div");
+        wrap.className = `message ${role}`;
+
+        if (role === "user") {
+            if (text) {
+                const body = document.createElement("div");
+                body.className = "message-text";
+                body.textContent = text;
+                wrap.appendChild(body);
+            }
+            if (imageDataUrl) {
+                const img = document.createElement("img");
+                img.className = "message-image";
+                img.src = imageDataUrl;
+                img.alt = "上传的图片";
+                wrap.appendChild(img);
+            }
+        } else {
+            const body = document.createElement("div");
+            body.className = "message-text";
+            wrap.appendChild(body);
+        }
+
+        messagesEl.appendChild(wrap);
+        scrollChat();
+        return wrap;
+    }
+
+    async function readError(response) {
+        const text = await response.text();
+        try {
+            const payload = JSON.parse(text);
+            return payload.detail || text;
+        } catch (e) {
+            return text || `HTTP ${response.status}`;
+        }
+    }
+
+    async function sendChatMessage() {
+        if (isSending || isEnding) return;
+
+        const text = inputEl.value.trim();
+        const image = pendingImage;
+        if (!text && !image) return;
+
+        isSending = true;
+        updateSendState();
+        updateEndButton();
+
+        inputEl.value = "";
+        autoResize();
+        if (image) clearPendingImage();
+        emptyState.hidden = true;
+
+        const historyContent = image
+            ? [
+                { type: "text", text: text || "请先描述这张图并开始提问。" },
+                { type: "image_url", image_url: { url: image.dataUrl } }
+              ]
+            : text;
+
+        chatHistory.push({ role: "user", content: historyContent });
+        addMsg(text, "user", image ? image.dataUrl : null);
+        updateEndButton();
+
+        const aiWrap = addMsg("", "assistant");
+        const aiText = aiWrap.querySelector(".message-text");
+        let fullText = "";
+        let streamOk = false;
+
+        try {
+            const response = await fetch(`${API_BASE}/chat`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    student_id: DEMO_STUDENT_ID,
+                    message: text,
+                    image_base64: image ? image.base64 : null,
+                    image_mime_type: image ? image.mime : null,
+                    // 诊断统一由“结束对话”按钮触发，避免每轮流式请求额外诊断
+                    auto_diagnosis: false
+                })
+            });
+
+            if (!response.ok || !response.body) {
+                throw new Error(await readError(response));
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                fullText += decoder.decode(value, { stream: true });
+                aiText.innerHTML = renderMarkdown(fullText);
+                renderMath(aiText);
+                scrollChat();
+            }
+            streamOk = true;
+        } catch (e) {
+            fullText = fullText || `【连接失败】${e.message || e}`;
+            aiText.textContent = fullText;
+            aiWrap.classList.add("error");
+        } finally {
+            if (streamOk && fullText.trim()) {
+                chatHistory.push({ role: "assistant", content: fullText });
+            }
+            isSending = false;
+            updateSendState();
+            updateEndButton();
+        }
+    }
+
+    function setReportField(id, text) {
+        const element = document.getElementById(id);
+        element.innerHTML = renderMarkdown(text || "—");
+    }
+
+    function resetQuizUI() {
+        document.getElementById("quiz-status").textContent = "正在生成针对性样卷…";
+        document.getElementById("quiz-content").innerHTML = "";
+        document.getElementById("quiz-answers").innerHTML = "";
+        document.getElementById("quiz-answers").hidden = true;
+        const toggle = document.getElementById("toggle-answers-btn");
+        toggle.hidden = true;
+        toggle.textContent = "查看参考答案";
+    }
+
+    function showReport(diagnosis) {
+        chatView.hidden = true;
+        reportView.hidden = false;
+        reportView.scrollTop = 0;
+
+        setReportField("report-diagnosis", diagnosis.diagnosis || "本次对话暂未识别出明确薄弱点。");
+        setReportField("report-evidence", diagnosis.evidence || "暂无文本证据。");
+        setReportField("report-suggestion", diagnosis.suggestion || "建议继续进行下一轮针对性练习。");
+
+        const visual = String(diagnosis.visual_evidence || "").trim();
+        document.getElementById("report-visual-row").hidden = !visual;
+        setReportField("report-visual", visual || "—");
+
+        resetQuizUI();
+        renderMath(document.querySelector(".diagnosis-panel"));
+    }
+
+    async function generateQuiz(diagnosis, token) {
+        const status = document.getElementById("quiz-status");
+        const quizContent = document.getElementById("quiz-content");
+        const answersContent = document.getElementById("quiz-answers");
+
+        try {
+            const response = await fetch(`${API_BASE}/api/generate_quiz`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    student_id: DEMO_STUDENT_ID,
+                    diagnosis,
+                    count: 4
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(await readError(response));
+            }
+
+            const data = await response.json();
+            if (token !== reportToken) return;
+
+            quizContent.innerHTML = renderMarkdown(data.quiz || "暂未生成题目。");
+            answersContent.innerHTML = renderMarkdown(data.answers || "");
+            answersContent.hidden = true;
+
+            const hasAnswers = !!String(data.answers || "").trim();
+            const toggle = document.getElementById("toggle-answers-btn");
+            toggle.hidden = !hasAnswers;
+            toggle.textContent = "查看参考答案";
+
+            status.textContent = `已生成 ${data.count || 4} 道针对性练习`;
+            renderMath(quizContent);
+        } catch (e) {
+            if (token !== reportToken) return;
+            status.textContent = "样卷生成失败";
+            quizContent.innerHTML = "";
+            const error = document.createElement("p");
+            error.className = "report-error";
+            error.textContent = `生成样卷失败：${e.message || e}`;
+            quizContent.appendChild(error);
+        }
+    }
+
+    async function endConversation() {
+        if (isSending || isEnding) return;
+        if (!chatHistory.some(item => item.role === "user")) return;
+
+        const token = ++reportToken;
+        isEnding = true;
+        updateSendState();
+        updateEndButton();
+
+        endBtn.textContent = "正在生成诊断…";
+
+        try {
+            // 触发原有 Profiler 会话汇总（后台执行，不阻塞报告展示）
+            fetch(`${API_BASE}/chat/end`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    student_id: DEMO_STUDENT_ID,
+                    history: chatHistory.slice(-20)
+                })
+            }).catch(() => {});
+
+            const response = await fetch(`${API_BASE}/api/get_diagnosis`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    student_id: DEMO_STUDENT_ID,
+                    history: chatHistory.slice(-10),
+                    persist: true
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(await readError(response));
+            }
+
+            const data = await response.json();
+            if (token !== reportToken) return;
+
+            currentDiagnosis = data.diagnosis || {};
+            showReport(currentDiagnosis);
+            await generateQuiz(currentDiagnosis, token);
+        } catch (e) {
+            if (token === reportToken) {
+                alert(`生成学情诊断失败：${e.message || e}`);
+            }
+        } finally {
+            isEnding = false;
+            endBtn.textContent = "结束对话，生成学情诊断";
+            updateSendState();
+            updateEndButton();
+        }
+    }
+
+    function toggleAnswers() {
+        const answers = document.getElementById("quiz-answers");
+        const toggle = document.getElementById("toggle-answers-btn");
+
+        if (answers.hidden) {
+            answers.hidden = false;
+            toggle.textContent = "收起参考答案";
+            renderMath(answers);
+        } else {
+            answers.hidden = true;
+            toggle.textContent = "查看参考答案";
+        }
+    }
+
+    function restartConversation() {
+        reportToken += 1;
+        isSending = false;
+        isEnding = false;
+        chatHistory = [];
+        currentDiagnosis = null;
+
+        clearPendingImage();
+        messagesEl.innerHTML = "";
+        emptyState.hidden = false;
+        inputEl.value = "";
+        autoResize();
+
+        setReportField("report-diagnosis", "—");
+        setReportField("report-evidence", "—");
+        setReportField("report-suggestion", "—");
+        document.getElementById("report-visual-row").hidden = true;
+        resetQuizUI();
+
+        reportView.hidden = true;
+        chatView.hidden = false;
+        reportView.scrollTop = 0;
+        chatWindow.scrollTop = 0;
+        endBtn.textContent = "结束对话，生成学情诊断";
+
+        updateSendState();
+        updateEndButton();
+        inputEl.focus();
+    }
+
+    inputEl.addEventListener("input", () => {
+        autoResize();
+        updateSendState();
+    });
+
+    inputEl.addEventListener("keydown", event => {
+        if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
+            event.preventDefault();
+            sendChatMessage();
+        }
+    });
+
+    autoResize();
+    updateSendState();
+    updateEndButton();
+    inputEl.focus();
+</script>
+</body>
+</html>
+

@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1d8fb8">
+<title>LeadAnswer — 懂你的理科多模态AI助教</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Plus+Jakarta+Sans:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+:root {
+    --u: min(calc(100vw / 1600), calc(100vh / 780), 1.6px);
+    --fw: calc(1600 * var(--u));
+    --hair: max(1px, calc(1 * var(--u)));
+    --font-display: 'Instrument Serif', Georgia, serif;
+    --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
+    --ease: cubic-bezier(.16, 1, .3, 1);
+    --white: #ffffff;
+    --ink: #071014;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    height: 100%;
+    overflow: hidden;
+    background: #1d8fb8;
+}
+
+html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-size-adjust: 100%;
+}
+
+body {
+    margin: 0;
+    font-family: var(--font-body);
+    color: var(--white);
+}
+
+.viewport {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    background: #1d8fb8;
+}
+
+/* ==========================================
+   背景媒体
+   ========================================== */
+.media {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    background: #1d8fb8;
+}
+
+.bg-video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    filter: saturate(0.86);
+}
+
+/* 轻微压暗左侧，保证白色标题的可读性 */
+.media::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        linear-gradient(90deg, rgba(4, 15, 19, 0.42) 0%, rgba(4, 15, 19, 0.18) 36%, rgba(4, 15, 19, 0) 66%),
+        linear-gradient(180deg, rgba(4, 15, 19, 0.16) 0%, rgba(4, 15, 19, 0) 32%);
+}
+
+/* ==========================================
+   舞台与 Hero 绝对定位
+   ========================================== */
+.stage {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: var(--fw);
+    height: 100%;
+    transform: translateX(-50%);
+    z-index: 2;
+}
+
+.hero {
+    position: static;
+}
+
+.eyebrow {
+    position: absolute;
+    left: calc(46.6 * var(--u));
+    top: calc(128.2 * var(--u));
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: calc(15 * var(--u));
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: rgba(255, 255, 255, 0.76);
+}
+
+.headline-mask {
+    position: absolute;
+    left: calc(46.0 * var(--u));
+    top: calc(163.0 * var(--u));
+    overflow: hidden;
+    clip-path: inset(0 0 0 0);
+    padding-bottom: 0.08em;
+    margin-bottom: -0.08em;
+}
+
+.headline {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: calc(71.2 * var(--u));
+    line-height: 1;
+    letter-spacing: calc(0.5696 * var(--u));
+    white-space: nowrap;
+    color: var(--white);
+    text-shadow: 0 calc(2 * var(--u)) calc(30 * var(--u)) rgba(0, 0, 0, 0.22);
+}
+
+.lede {
+    position: absolute;
+    left: calc(46.4 * var(--u));
+    top: calc(245.2 * var(--u));
+    width: calc(432 * var(--u));
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: calc(17 * var(--u));
+    font-weight: 400;
+    line-height: calc(22.9 * var(--u));
+    color: rgba(255, 255, 255, 0.82);
+}
+
+.cta {
+    position: absolute;
+    left: calc(46.8 * var(--u));
+    top: calc(335.0 * var(--u));
+    display: block;
+    width: calc(157.0 * var(--u));
+    height: calc(40.6 * var(--u));
+    border-radius: calc(4.2 * var(--u));
+    background: #ffffff;
+    color: var(--ink);
+    text-decoration: none;
+    overflow: hidden;
+    box-shadow: 0 calc(8 * var(--u)) calc(30 * var(--u)) rgba(0, 0, 0, 0.12);
+    transition: background 0.3s var(--ease), box-shadow 0.3s var(--ease);
+}
+
+.cta span {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-body);
+    font-size: calc(14 * var(--u));
+    font-weight: 500;
+    letter-spacing: 0.02em;
+}
+
+.cta:hover {
+    background: #f2f7f8;
+    box-shadow: 0 calc(10 * var(--u)) calc(36 * var(--u)) rgba(0, 0, 0, 0.2);
+}
+
+.cta:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 3px;
+}
+
+/* ==========================================
+   入场前初始状态（仅 js-enter 时生效）
+   ========================================== */
+.js-enter .eyebrow,
+.js-enter .lede,
+.js-enter .cta,
+.js-enter .brand-block,
+.js-enter .col,
+.js-enter .rule,
+.js-enter .copyright,
+.js-enter .socials {
+    opacity: 0;
+}
+
+.js-enter .headline {
+    transform: translateY(118%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .js-enter .eyebrow,
+    .js-enter .lede,
+    .js-enter .cta,
+    .js-enter .brand-block,
+    .js-enter .col,
+    .js-enter .rule,
+    .js-enter .copyright,
+    .js-enter .socials {
+        opacity: 1 !important;
+    }
+
+    .js-enter .headline {
+        transform: none !important;
+    }
+}
+
+/* ==========================================
+   玻璃态页脚
+   ========================================== */
+.footer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: calc(342 * var(--u));
+    z-index: 3;
+    overflow: hidden;
+    background:
+        linear-gradient(90deg,
+            rgba(255, 255, 255, 0.022) 0,
+            rgba(255, 255, 255, 0.072) calc(20 * var(--u)),
+            rgba(255, 255, 255, 0) calc(58 * var(--u))),
+        linear-gradient(270deg,
+            rgba(255, 255, 255, 0.02) 0,
+            rgba(255, 255, 255, 0.05) calc(20 * var(--u)),
+            rgba(255, 255, 255, 0) calc(58 * var(--u))),
+        linear-gradient(180deg,
+            rgba(34, 14, 0, 0.28) 0%,
+            rgba(70, 34, 0, 0.24) 52%,
+            rgba(160, 120, 48, 0.6) 100%);
+    backdrop-filter: blur(calc(50 * var(--u))) saturate(0.85);
+    -webkit-backdrop-filter: blur(calc(50 * var(--u))) saturate(0.85);
+    box-shadow:
+        0 0 0 var(--hair) rgba(255, 255, 255, 0.145),
+        inset var(--hair) 0 0 rgba(255, 255, 255, 0.16),
+        inset calc(-1 * var(--hair)) 0 0 rgba(255, 255, 255, 0.11),
+        inset 0 calc(-1 * var(--hair)) 0 rgba(255, 255, 255, 0.09),
+        inset 0 var(--hair) 0 rgba(255, 255, 255, 0.22);
+}
+
+.brand-block {
+    position: absolute;
+    left: calc(46 * var(--u));
+    top: calc(50 * var(--u));
+    width: calc(320 * var(--u));
+    color: var(--white);
+}
+
+.brand-row {
+    display: flex;
+    align-items: center;
+    gap: calc(12 * var(--u));
+}
+
+.brand-mark {
+    width: calc(30 * var(--u));
+    height: calc(30 * var(--u));
+    flex: 0 0 auto;
+    color: #ffffff;
+    filter: drop-shadow(0 calc(2 * var(--u)) calc(10 * var(--u)) rgba(255, 255, 255, 0.2));
+}
+
+.brand-name {
+    font-family: var(--font-display);
+    font-size: calc(31 * var(--u));
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: 0.005em;
+}
+
+.brand-slogan {
+    width: calc(300 * var(--u));
+    margin: calc(20 * var(--u)) 0 0;
+    font-size: calc(13.5 * var(--u));
+    line-height: 1.75;
+    color: rgba(255, 255, 255, 0.62);
+}
+
+.footer-nav {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.col {
+    position: absolute;
+    top: calc(54 * var(--u));
+    pointer-events: auto;
+}
+
+.c1 { left: calc(500 * var(--u)); }
+.c2 { left: calc(800 * var(--u)); }
+.c3 { left: calc(1100 * var(--u)); }
+
+.col h2 {
+    margin: 0 0 calc(18 * var(--u));
+    font-family: var(--font-body);
+    font-size: calc(11 * var(--u));
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.col h2 span {
+    margin-left: calc(8 * var(--u));
+    font-size: calc(9.5 * var(--u));
+    letter-spacing: 0.08em;
+    text-transform: none;
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.col a {
+    display: block;
+    width: max-content;
+    font-size: calc(14 * var(--u));
+    line-height: 2.15;
+    color: rgba(255, 255, 255, 0.84);
+    text-decoration: none;
+    transition: color 0.25s var(--ease), transform 0.25s var(--ease);
+}
+
+.col a:hover {
+    color: #ffffff;
+    transform: translateX(calc(2 * var(--u)));
+}
+
+.col a:focus-visible {
+    outline: 1px solid rgba(255, 255, 255, 0.7);
+    outline-offset: 3px;
+}
+
+.rule {
+    position: absolute;
+    left: calc(46 * var(--u));
+    right: calc(46 * var(--u));
+    bottom: calc(86 * var(--u));
+    height: 1px;
+    background: linear-gradient(90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.18) 12%,
+        rgba(255, 255, 255, 0.18) 88%,
+        rgba(255, 255, 255, 0) 100%);
+}
+
+.footer-bottom {
+    position: absolute;
+    left: calc(46 * var(--u));
+    right: calc(46 * var(--u));
+    bottom: calc(28 * var(--u));
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: calc(20 * var(--u));
+}
+
+.copyright {
+    font-size: calc(11.5 * var(--u));
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    color: rgba(255, 255, 255, 0.48);
+}
+
+.socials {
+    display: flex;
+    align-items: center;
+    gap: calc(14 * var(--u));
+}
+
+.socials a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: calc(28 * var(--u));
+    height: calc(28 * var(--u));
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    color: rgba(255, 255, 255, 0.7);
+    transition: color 0.25s var(--ease), border-color 0.25s var(--ease), background 0.25s var(--ease);
+}
+
+.socials a:hover {
+    color: #0a1215;
+    background: #ffffff;
+    border-color: #ffffff;
+}
+
+.socials svg {
+    display: block;
+    width: calc(14 * var(--u));
+    height: calc(14 * var(--u));
+    fill: currentColor;
+}
+
+/* ==========================================
+   移动端 / 竖屏：取消绝对定位，改为流式布局
+   ========================================== */
+@media (max-aspect-ratio: 5/4) {
+    :root {
+        --u: calc(100vw / 780);
+        --fw: 100%;
+        --hair: 1px;
+    }
+
+    html,
+    body {
+        overflow: hidden;
+    }
+
+    .viewport {
+        height: 100dvh;
+        overflow-x: hidden;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .bg-video {
+        width: 100%;
+        height: 106%;
+        object-position: 80% bottom;
+    }
+
+    .media::after {
+        background: linear-gradient(180deg,
+            rgba(4, 15, 19, 0.46) 0%,
+            rgba(4, 15, 19, 0.1) 42%,
+            rgba(4, 15, 19, 0.5) 100%);
+    }
+
+    .stage {
+        position: relative;
+        left: auto;
+        top: auto;
+        width: 100%;
+        height: auto;
+        min-height: 100dvh;
+        transform: none;
+        display: flex;
+        flex-direction: column;
+        padding: clamp(52px, 14vw, 88px) clamp(22px, 6vw, 40px) clamp(44px, 12vw, 72px);
+    }
+
+    .hero {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .eyebrow {
+        position: static;
+        font-size: clamp(11px, 2.2vw, 14px);
+        line-height: 1.2;
+        letter-spacing: 0.2em;
+        white-space: normal;
+    }
+
+    .headline-mask {
+        position: static;
+        width: 100%;
+        margin-top: clamp(16px, 4vw, 24px);
+        padding-bottom: 0.12em;
+        margin-bottom: -0.12em;
+    }
+
+    .headline {
+        max-width: 100%;
+        font-size: clamp(42px, 10.8vw, 72px);
+        line-height: 1.04;
+        letter-spacing: 0.005em;
+        white-space: normal;
+        overflow-wrap: break-word;
+        text-shadow: 0 2px 30px rgba(0, 0, 0, 0.28);
+    }
+
+    .lede {
+        position: static;
+        width: 100%;
+        max-width: 520px;
+        margin: clamp(18px, 4.5vw, 26px) 0 0;
+        font-size: clamp(15px, 3.6vw, 18px);
+        line-height: 1.65;
+        overflow-wrap: break-word;
+    }
+
+    .cta {
+        position: relative;
+        left: auto;
+        top: auto;
+        width: clamp(160px, 42vw, 220px);
+        height: clamp(46px, 12vw, 56px);
+        margin-top: clamp(26px, 7vw, 38px);
+        border-radius: 8px;
+    }
+
+    .cta span {
+        font-size: clamp(14px, 3.6vw, 16px);
+    }
+
+    .footer {
+        position: relative;
+        left: auto;
+        right: auto;
+        bottom: auto;
+        width: 100%;
+        height: auto;
+        padding: clamp(32px, 8vw, 48px) clamp(22px, 6vw, 40px) calc(clamp(24px, 6vw, 36px) + env(safe-area-inset-bottom));
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: clamp(26px, 7vw, 40px) clamp(18px, 5vw, 32px);
+        background: linear-gradient(180deg,
+            rgba(15, 22, 24, 0.94) 0%,
+            rgba(8, 13, 15, 0.98) 58%,
+            rgba(39, 26, 10, 0.96) 100%);
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+        overflow: hidden;
+    }
+
+    .brand-block {
+        position: static;
+        width: 100%;
+        grid-column: 1 / -1;
+    }
+
+    .brand-row {
+        gap: 10px;
+    }
+
+    .brand-mark {
+        width: 28px;
+        height: 28px;
+    }
+
+    .brand-name {
+        font-size: clamp(26px, 7vw, 34px);
+    }
+
+    .brand-slogan {
+        width: 100%;
+        max-width: 420px;
+        margin-top: 12px;
+        font-size: clamp(12px, 3.2vw, 14px);
+        line-height: 1.6;
+    }
+
+    .footer-nav {
+        position: static;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: clamp(24px, 6vw, 36px) clamp(20px, 5vw, 32px);
+        grid-column: 1 / -1;
+        pointer-events: auto;
+    }
+
+    .col {
+        position: static;
+        left: auto;
+        top: auto;
+    }
+
+    .c1,
+    .c2 {
+        grid-column: auto;
+    }
+
+    .c3 {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        column-gap: 12px;
+    }
+
+    .col.c3 h2 {
+        grid-column: 1 / -1;
+    }
+
+    .col.c3 a {
+        display: block;
+        width: auto;
+        vertical-align: top;
+    }
+
+    .col h2 {
+        margin-bottom: 10px;
+        font-size: clamp(10px, 2.6vw, 12px);
+        letter-spacing: 0.14em;
+        white-space: normal;
+    }
+
+    .col h2 span {
+        display: block;
+        margin: 6px 0 0;
+        font-size: clamp(9px, 2.4vw, 11px);
+        color: rgba(255, 255, 255, 0.32);
+    }
+
+    .col a {
+        width: auto;
+        font-size: clamp(13px, 3.4vw, 15px);
+        line-height: 2.1;
+    }
+
+    .rule {
+        position: static;
+        width: 100%;
+        height: 1px;
+        margin: 0;
+        grid-column: 1 / -1;
+    }
+
+    .footer-bottom {
+        position: static;
+        grid-column: 1 / -1;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+    }
+
+    .copyright {
+        font-size: clamp(10px, 2.6vw, 11.5px);
+        white-space: normal;
+    }
+
+    .socials {
+        gap: 10px;
+    }
+
+    .socials a {
+        width: 28px;
+        height: 28px;
+    }
+
+    .socials svg {
+        width: 14px;
+        height: 14px;
+    }
+}
+</style>
+
+<script>
+    // 在首次绘制前标记入场状态，避免文字闪烁
+    if (window.matchMedia && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        document.documentElement.classList.add('js-enter');
+    }
+</script>
+</head>
+<body>
+<div class="viewport">
+
+    <!-- 背景视频：失败时回退到海报图与 #1d8fb8 背景色 -->
+    <div class="media" aria-hidden="true">
+        <video class="bg-video" autoplay muted loop playsinline preload="auto"
+               poster="https://d2ol7oe51mr4n9.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/693205bf-8048-456a-879e-4e0a1b85a098.webp">
+            <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260826_123836_11a3c5e0-713f-4bef-a8e9-7dd93bdea3b0.mp4" type="video/mp4">
+        </video>
+    </div>
+
+    <div class="stage">
+        <section class="hero" aria-labelledby="hero-title">
+            <p class="eyebrow">Your AI Socratic Tutor</p>
+
+            <div class="headline-mask">
+                <h1 class="headline" id="hero-title">看懂你的图，引导你思考</h1>
+            </div>
+
+            <p class="lede">不再直接给答案。LeadAnswer 通过多模态视觉识别与苏格拉底式追问，精准诊断你的理科盲区，生成个性化学习闭环。</p>
+
+            <a class="cta" href="/index.html" aria-label="进入 LeadAnswer 系统">
+                <span>进入系统</span>
+            </a>
+        </section>
+    </div>
+
+    <footer class="footer">
+        <div class="brand-block">
+            <div class="brand-row">
+                <svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true">
+                    <path fill="currentColor" d="M62 32 L44.008 36.976 L53.213 10.787 L36.976 44.008 L32 62 L27.024 44.008 L10.787 53.213 L19.992 36.976 L2 32 L19.992 27.024 L10.787 10.787 L27.024 19.992 L32 2 L36.976 19.992 L53.213 10.787 L44.008 27.024 Z"/>
+                </svg>
+                <span class="brand-name">LeadAnswer</span>
+            </div>
+            <p class="brand-slogan">视觉诊断与启发式问答，让每一次辅导都直击痛点。</p>
+        </div>
+
+        <nav class="footer-nav" aria-label="LeadAnswer 页脚导航">
+            <div class="col c1">
+                <h2>SOLUTIONS <span>核心功能</span></h2>
+                <a href="#">多模态识图</a>
+                <a href="#">苏格拉底问答</a>
+                <a href="#">学情诊断</a>
+                <a href="#">变式强化</a>
+            </div>
+
+            <div class="col c2">
+                <h2>CAPABILITIES <span>技术栈</span></h2>
+                <a href="#">DeepSeek-V4.1</a>
+                <a href="#">多智能体协同</a>
+                <a href="#">结构化JSON</a>
+                <a href="#">视觉特征提取</a>
+            </div>
+
+            <div class="col c3">
+                <h2>RESOURCES <span>关于项目</span></h2>
+                <a href="#">团队介绍</a>
+                <a href="#">测试报告</a>
+                <a href="#">演示视频</a>
+                <a href="#">比赛文档</a>
+            </div>
+        </nav>
+
+        <div class="rule" aria-hidden="true"></div>
+
+        <div class="footer-bottom">
+            <span class="copyright">® 2025 LeadAnswer all rights reserved.</span>
+
+            <div class="socials" aria-label="社交链接">
+                <a href="#" aria-label="GitHub">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.86 10.92c.58.1.79-.25.79-.56v-2.17c-3.2.7-3.88-1.36-3.88-1.36-.53-1.33-1.29-1.68-1.29-1.68-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.04 1.78 2.73 1.26 3.4.97.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.27-5.24-5.66 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.46.11-3.04 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.62 1.58.23 2.75.11 3.04.74.8 1.18 1.82 1.18 3.07 0 4.4-2.69 5.37-5.25 5.65.41.36.78 1.07.78 2.16v3.2c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5Z"/>
+                    </svg>
+                </a>
+                <a href="#" aria-label="演示视频">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M8 5.5v13l11-6.5-11-6.5Z"/>
+                    </svg>
+                </a>
+                <a href="#" aria-label="邮件联系">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm1.4 2L12 12.4 19.6 7H4.4Z"/>
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </footer>
+
+</div>
+
+<script>
+    (() => {
+        const root = document.documentElement;
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        // 某些浏览器会在脚本前拦截自动播放，这里静默补一次 play
+        const video = document.querySelector('.bg-video');
+        if (video && typeof video.play === 'function') {
+            const playback = video.play();
+            if (playback && typeof playback.catch === 'function') {
+                playback.catch(() => {});
+            }
+        }
+
+        // 尊重系统“减少动态效果”设置
+        if (prefersReducedMotion || !root.classList.contains('js-enter')) {
+            root.classList.remove('js-enter');
+            return;
+        }
+
+        const EASE = 'cubic-bezier(.16, 1, .3, 1)';
+        const animations = [];
+
+        const play = (selector, keyframes, options) => {
+            const element = document.querySelector(selector);
+            if (!element) return;
+            animations.push(element.animate(keyframes, {
+                fill: 'both',
+                easing: EASE,
+                ...options
+            }));
+        };
+
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                // 1. Eyebrow：60ms 后上浮 12px，560ms
+                play('.eyebrow', [
+                    { opacity: 0, transform: 'translateY(12px)' },
+                    { opacity: 1, transform: 'translateY(0)' }
+                ], { duration: 560, delay: 60 });
+
+                // 2. H1：170ms 后从 118% 位移进入，950ms
+                play('.headline', [
+                    { transform: 'translateY(118%)' },
+                    { transform: 'translateY(0)' }
+                ], { duration: 950, delay: 170 });
+
+                // 3. Lede：430ms 后上浮 14px，660ms
+                play('.lede', [
+                    { opacity: 0, transform: 'translateY(14px)' },
+                    { opacity: 1, transform: 'translateY(0)' }
+                ], { duration: 660, delay: 430 });
+
+                // 4. CTA：620ms 后出现并缩放
+                play('.cta', [
+                    { opacity: 0, transform: 'scale(.92)' },
+                    { opacity: 1, transform: 'scale(1)' }
+                ], { duration: 600, delay: 620 });
+
+                // 5. 页脚元素：500ms - 1200ms 区间依次淡入
+                const footerItems = [
+                    ['.brand-block', 500],
+                    ['.c1', 620],
+                    ['.c2', 720],
+                    ['.c3', 820],
+                    ['.rule', 950],
+                    ['.copyright', 1050],
+                    ['.socials', 1150]
+                ];
+
+                footerItems.forEach(([selector, delay]) => {
+                    play(selector, [
+                        { opacity: 0, transform: 'translateY(12px)' },
+                        { opacity: 1, transform: 'translateY(0)' }
+                    ], { duration: 500, delay });
+                });
+
+                // 所有动画结束后移除 js-enter，防止残留样式影响交互
+                Promise.allSettled(animations.map(animation => animation.finished))
+                    .then(() => {
+                        root.classList.remove('js-enter');
+                        animations.forEach(animation => {
+                            try {
+                                animation.cancel();
+                            } catch (error) {
+                                // 忽略已结束动画的取消异常
+                            }
+                        });
+                    });
+            });
+        });
+    })();
+</script>
+</body>
+</html>
+
